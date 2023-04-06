@@ -47,18 +47,17 @@ if view_penner == True:
     output_x_velocities1 = []
     output_y_velocities1 = []
     output_a_velocities1 = []
-    angles = []
-    all_vels = []
-    all_vel_dirs = []
     for i in range(0, n1):
         mu = 0.242
         #inputs
         ix = HVI1[i]
         iy = VVI1[i]
         iw = SI1[i]
-        vel = (math.sqrt((HVI1[i]*HVI1[i]) + (VVI1[i]*VVI1[i])))
-        vel_dir = math.atan(abs(VVI1[i]/HVI1[i]))
-        ang = 15.4 * (ix / 18.6)  * (math.degrees(vel_dir) / 44.4)
+        vel = (math.sqrt(ix**2 + iy**2))
+        vel_dir = math.atan(abs(ix/iy))
+
+        ang = 15.4 * (vel / 18.6)  * (math.degrees(vel_dir) / 44.4)
+    
         theta = math.radians(abs(ang))
         ixdash = (ix * math.cos(theta)) - (abs(iy) * math.sin(theta))
         iydash = (ix * math.sin(theta)) + (abs(iy) * math.cos(theta))
@@ -94,10 +93,10 @@ if view_penner == True:
         ix = HVI2[i]
         iy = VVI2[i]
         iw = SI2[i]
-        vel = (math.sqrt((HVI2[i]*HVI2[i]) + (VVI2[i]*VVI2[i])))
-        vel_dir = math.atan(abs(VVI2[i]/HVI2[i]))
+        vel = (math.sqrt(ix**2 + iy**2))
+        vel_dir = math.atan(abs(ix/iy))
         
-        ang = 15.4 * (ix / 18.6)  * (math.degrees(vel_dir) / 44.4)
+        ang = 15.4 * (vel / 18.6)  * (math.degrees(vel_dir) / 44.4)
         ang = abs(ang)
         theta = math.radians(ang)
         ixdash = (ix * math.cos(theta)) - (abs(iy) * math.sin(theta))
@@ -322,6 +321,5 @@ C_x2 = abs(0 - cx2[1])
 C_y2 = abs(0 - cy2[1])
 C_a2 = abs(0 - ca2[1])
 print("C:", (str(C_x2))[:num_digits_shown], (str(C_y2))[:num_digits_shown], (str(C_a2))[:num_digits_shown])
-
 
 
