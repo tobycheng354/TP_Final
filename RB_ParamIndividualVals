@@ -1,0 +1,74 @@
+import math
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+#data
+data = pd.read_csv("~/Desktop/Technical Project/Data/ResultsCourse.csv")
+#data = pd.read_csv("~/Desktop/Technical Project/Data/ResultsCourse.csv")
+n = len(data)
+HVI = data['HorizontalVelIn']
+VVI = data['VerticalVelIn']
+SI = data['SpinIn']
+HVO = data['HorizontalVelOut']
+VVO = data['VerticalVelOut']
+SO = data['SpinOut']
+
+
+ang_min = []
+mu_min = []
+e_min = []
+vel_magnitudes = []
+vel_directions = []
+
+r = 0.0202
+for i in range(0, n):
+    print("Datapoint:", i+1)
+    #setup
+    angles = np.linspace(10, 40, 40)
+    mus = np.linspace(0, 1, 40)
+    es = np.linspace(0, 1, 40)
+    errors = np.zeros([len(angles), len(mus), len(es)])
+    x = -1
+    for angle in angles:
+        x += 1
+        y = -1
+        for mu in mus:
+            y += 1
+            z = -1
+            for e in es:
+                z += 1
+                
+                #main
+                ix = HVI[i]
+                iy = VVI[i]
+                iw = SI[i]
+                theta = math.radians(angle)
+                ixdash = (ix * math.cos(theta)) - (abs(iy) * math.sin(theta))
+                iydash = (ix * math.sin(theta)) + (abs(iy) * math.cos(theta))
+                mu_c = (2*(ixdash + (r*iw)))/(7*(1+e)*(iydash))  
+                if mu <= mu_c: #bounce
+                    rxdash = ixdash - ((mu * abs(iydash))*(1+e))
+                    rydash = e * abs(iydash)
+                    rw = iw - (((5*mu)/(2*r))*(abs(iydash))*(1+e))
+                else: #roll
+                    rxdash = ((5/7)*ixdash) - ((2/7)*r*iw)
+                    rydash = e*abs(iydash)
+                    rw = -rxdash/r
+                rx = (rxdash * math.cos(theta)) - (rydash * math.sin(theta))
+                ry = (rxdash * math.sin(theta)) + (rydash * math.cos(theta))
+                x_err = (abs(HVO[i] - rx))
+                y_err = (abs(VVO[i] - ry))
+                a_err = (abs(SO[i] - rw))
+                total_err = x_err + y_err + (0.0001*a_err)
+                errors[x][y][z] = total_err
+    min_idx = np.unravel_index(errors.argmin(), errors.shape)
+    ang_min.append(angles[min_idx[0]])
+    mu_min.append(mus[min_idx[1]])
+    e_min.append(es[min_idx[2]])
+    vel_magnitudes.append(math.sqrt((HVI[i]*HVI[i]) + (VVI[i]*VVI[i])))
+    vel_directions.append(math.degrees(math.atan(VVI[i]/HVI[i])))
+
+
+
