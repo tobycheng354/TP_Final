@@ -30,7 +30,8 @@ mpl.rcParams['axes.unicode_minus']=False
 num_iter = 10
 
 #data
-data2 = pd.read_csv("~/Desktop/ResultsAstro.csv")
+data2 = pd.read_csv("~/Desktop/Technical Project/Data/ResultsAstro.csv")
+#data2 = pd.read_csv("~/Desktop/Technical Project/Data/ResultsAstro.csv")
 HVI2 = data2['HorizontalVelIn']
 VVI2 = data2['VerticalVelIn']
 SI2 = data2['SpinIn']
