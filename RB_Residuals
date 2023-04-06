@@ -45,7 +45,7 @@ if view_penner == True:
     output_y_velocities1 = []
     output_a_velocities1 = []
     for i in range(0, n1):
-        mu = 0.242
+        mu = 0.225
         #inputs
         ix = HVI1[i]
         iy = VVI1[i]
@@ -86,7 +86,7 @@ if view_penner == True:
     output_a_velocities2 = []
     for i in range(0, n2):
         #inputs
-        mu = 0.354
+        mu = 0.298
         ix = HVI2[i]
         iy = VVI2[i]
         iw = SI2[i]
@@ -279,6 +279,7 @@ axs[2].set_box_aspect(1)
 axs[2].tick_params(axis='both', which='major', labelsize=tick_size)
 axs[2].tick_params(axis="y", which='major', rotation = 90)
 axs[2].set_title(r"$\omega$", fontsize = title_size)
+
 
 #METRICS
 num_digits_shown = 6
