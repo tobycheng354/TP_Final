@@ -1,0 +1,318 @@
+import math
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import rc
+import matplotlib as mpl
+from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error
+import statistics
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator
+from scipy.integrate import solve_ivp
+
+#%%
+
+#DATA
+data = pd.read_csv("~/Desktop/Technical Project/Data/ResultsCourse.csv")
+n = len(data)
+HVI = data['HorizontalVelIn']
+VVI = data['VerticalVelIn']
+SI = data['SpinIn']
+HVO = data['HorizontalVelOut']
+VVO = data['VerticalVelOut']
+SO = data['SpinOut']
+
+
+#parameters
+t = np.linspace(0, 0.01, 1001)
+r = 0.0202                                          
+I = 0.0005
+L = 0.008
+tol = 0.001
+#mu = 0.2
+#K1 = 1*10e9
+#C1 = 0.5*10e6
+C2 = 10e5  
+CFx = 10e7
+
+
+def bounce(mu, K1, C1, i_v_x, i_v_y, i_v_a):
+    #odes
+    def ode_s1(t, g):
+        x = g[0]
+        y = g[1]
+        a = g[2]
+        dx = g[3]
+        dy = g[4]
+        da = g[5]
+        
+        if y >= 0:
+            a4 = 0
+            a3 = 0.5 * ((2 * math.acos(1)) - math.sin((2 * math.acos(1)))) * (r**2)
+        else:
+            a4 = 0
+            a3 = 0.5 * ((2 * math.acos((r+y)/r)) - math.sin((2 * math.acos((r+y)/r)))) * (r**2)
+        a1 = math.pi * (r**2 - (r+y)**2)
+        a2 = 0
+        
+        Fx = -C1*dx*a3
+        Fy = (-C1*dy - K1*y)*a1
+        R = (Fx * math.sin(a)) + (Fy * math.cos(a))
+        
+        dx2 = (-C1*dx*a3) -(CFx*a3) + (mu*R*math.sin(a))
+        dy2 = ((-C1*dy - K1*y)*a1) - (mu*R*math.cos(a))
+        da2 = (mu * R * r) / I
+        return(dx, dy, da, dx2, dy2, da2)
+    
+    def ode_s2(t, g):
+        x = g[0]
+        y = g[1]
+        a = g[2]
+        dx = g[3]
+        dy = g[4]
+        da = g[5]
+        
+        if (r+y)/r >= 1:
+            if (r+y+L)/r >= 1:
+                a4 = (0.5 * ((2 * math.acos(1)) - math.sin((2 * math.acos(1)))) * (r**2))
+                a3 = (0.5 * ((2 * math.acos(1)) - math.sin((2 * math.acos(1)))) * (r**2)) - a4 
+            else:
+                a4 = (0.5 * ((2 * math.acos((r+y+L)/r)) - math.sin((2 * math.acos((r+y+L)/r)))) * (r**2))
+                a3 = (0.5 * ((2 * math.acos(1)) - math.sin((2 * math.acos(1)))) * (r**2)) - a4
+         
+        else:
+            if (r+y+L)/r >= 1:
+                a4 = (0.5 * ((2 * math.acos(1)) - math.sin((2 * math.acos(1)))) * (r**2))
+                a3 = (0.5 * ((2 * math.acos((r+y)/r)) - math.sin((2 * math.acos((r+y)/r)))) * (r**2)) - a4
+            else:
+                a4 = (0.5 * ((2 * math.acos((r+y+L)/r)) - math.sin((2 * math.acos((r+y+L)/r)))) * (r**2))
+                a3 = (0.5 * ((2 * math.acos((r+y)/r)) - math.sin((2 * math.acos((r+y)/r)))) * (r**2)) - a4 
+        a1 = math.pi * (r**2 - (r+y)**2)
+        a2 = math.pi * (r**2 - (r+y+L)**2)
+        
+        Fx = (-C1*dx*a3) + (-C2*dx*a4) 
+        Fy = ((-C1*dy - K1*y)*a1) + (-C2*dy*a2) 
+        R = (Fx * math.sin(a)) + (Fy * math.cos(a))
+        
+        dx2 = (-C1*dx*a3) -(CFx*a3) + (-C2*dx*a4) + (mu*R*math.sin(a))
+        dy2 = ((-C1*dy - K1*y)*a1) + (-C2*dy*a2) - (mu*R*math.cos(a))
+        da2 = (mu * R * r) / I
+        return(dx, dy, da, dx2, dy2, da2)
+    
+    def ode_s3(t, g):
+        x = g[0]
+        y = g[1]
+        a = g[2]
+        dx = g[3]
+        dy = g[4]
+        da = g[5]
+        
+        if (r+y+L)/r >= 1:
+            a4 = 0.5 * ((2 * math.acos(1)) - math.sin((2 * math.acos(1)))) * (r**2)
+            a3 = 0.5 * math.pi * (r**2) - a4
+        else:
+            a4 = 0.5 * ((2 * math.acos((r+y+L)/r)) - math.sin((2 * math.acos((r+y+L)/r)))) * (r**2)
+            a3 = 0.5 * math.pi * (r**2) - a4   
+        a1 = math.pi * r**2
+        a2 = math.pi * (r**2 - (r+y+L)**2)
+        
+        Fx = (-C1*dx*a3) - (CFx*a3) + (-C2*dx*a4) 
+        Fy = ((-C1*dy - K1*y)*a1) + (-C2*dy*a2) 
+        R = (Fx * math.sin(a)) + (Fy * math.cos(a))
+        
+        dx2 = (-C1*dx*a3) + (-C2*dx*a4) + (mu*R*math.sin(a))
+        dy2 = ((-C1*dy - K1*y)*a1) + (-C2*dy*a2) - (mu*R*math.cos(a))
+        da2 = (mu * R * r) / I
+        return(dx, dy, da, dx2, dy2, da2)
+    
+    def ode_s4(t, g):
+        x = g[0]
+        y = g[1]
+        a = g[2]
+        dx = g[3]
+        dy = g[4]
+        da = g[5]
+        
+        a4 = 0.5 * math.pi * (r**2)
+        a3 = 0
+        a1 = math.pi * r**2
+        a2 = math.pi * (r**2)
+        
+        Fx = (-C1*dx*a3) + (-C2*dx*a4) 
+        Fy = ((-C1*dy - K1*y)*a1) + (-C2*dy*a2) 
+        R = (Fx * math.sin(a)) + (Fy * math.cos(a))
+        
+        dx2 = (-C1*dx*a3) -(CFx*a3)+ (-C2*dx*a4) + (mu*R*math.sin(a))
+        dy2 = ((-C1*dy - K1*y)*a1) + (-C2*dy*a2) - (mu*R*math.cos(a))
+        da2 = (mu * R * r) / I
+        return(dx, dy, da, dx2, dy2, da2)
+    
+    
+    def ty(t, g):
+        return g[1]
+    ty.terminal = True
+    ty.direction = 1
+    
+    #events stage change
+    def next_s1(t, g):
+        return g[1] + L
+        
+    def next_s2(t, g):
+        return g[1] + r
+    
+    def next_s3(t, g):
+        return g[1] + r + L
+    
+    next_s1.terminal = True
+    next_s2.terminal = True
+    next_s3.terminal = True
+    
+    
+    def solve_eq (i_v_x, i_v_y, i_v_a):
+        x_displacements = []
+        y_displacements = []
+        a_displacements = []
+        x_velocities = []
+        y_velocities = []
+        a_velocities = []
+        
+        s1 = True
+        s2 = False
+        s3 = False
+        s4 = False
+        
+        if s1 == True:
+            f1 = [0, 0, 0, i_v_x, i_v_y, i_v_a]
+            sol1 = solve_ivp(fun=ode_s1, t_span=[t[0], t[-1]], y0=f1, t_eval=t, events = [ty, next_s1])
+            for i in sol1.y[0]:
+                x_displacements.append(i)
+            for i in sol1.y[1]:
+                y_displacements.append(i)
+            for i in sol1.y[2]:
+                a_displacements.append(i)
+            for i in sol1.y[3]:
+                x_velocities.append(i)
+            for i in sol1.y[4]:
+                y_velocities.append(i)
+            for i in sol1.y[5]:
+                a_velocities.append(i)
+            
+            #condition for s2
+            if y_displacements[-1] < -L + tol:
+                s2 = True 
+        
+        if s2 == True:
+            f2 = [x_displacements[-1], y_displacements[-1], a_displacements[-1], x_velocities[-1], y_velocities[-1], a_velocities[-1]]
+            del x_displacements[-1], y_displacements[-1], a_displacements[-1], x_velocities[-1], y_velocities[-1], a_velocities[-1]
+            sol2 = solve_ivp(fun=ode_s2, t_span=[t[0], t[-1]], y0=f2, t_eval=t, events = [ty, next_s2])
+            for i in sol2.y[0]:
+                x_displacements.append(i)
+            for i in sol2.y[1]:
+                y_displacements.append(i)
+            for i in sol2.y[2]:
+                a_displacements.append(i)
+            for i in sol2.y[3]:
+                x_velocities.append(i)
+            for i in sol2.y[4]:
+                y_velocities.append(i)
+            for i in sol2.y[5]:
+                a_velocities.append(i)
+                
+            #condition for s3
+            if y_displacements[-1] < -r + tol:
+                print("s3")
+                s3 = True 
+            
+        if s3 == True:
+            f3 = [x_displacements[-1], y_displacements[-1], a_displacements[-1], x_velocities[-1], y_velocities[-1], a_velocities[-1]]
+            del x_displacements[-1], y_displacements[-1], a_displacements[-1], x_velocities[-1], y_velocities[-1], a_velocities[-1]
+            sol3 = solve_ivp(fun=ode_s3, t_span=[t[0], t[-1]], y0=f3, t_eval=t, events = [ty, next_s3])
+            for i in sol3.y[0]:
+                x_displacements.append(i)
+            for i in sol3.y[1]:
+                y_displacements.append(i)
+            for i in sol3.y[2]:
+                a_displacements.append(i)
+            for i in sol3.y[3]:
+                x_velocities.append(i)
+            for i in sol3.y[4]:
+                y_velocities.append(i)
+            for i in sol3.y[5]:
+                a_velocities.append(i)
+                
+            #condition for s4
+            if y_displacements[-1] < -r -L + tol:
+                s4 = True 
+                
+        if s4 == True:
+            f4 = [x_displacements[-1], y_displacements[-1], a_displacements[-1], x_velocities[-1], y_velocities[-1], a_velocities[-1]]
+            del x_displacements[-1], y_displacements[-1], a_displacements[-1], x_velocities[-1], y_velocities[-1], a_velocities[-1]
+            sol4 = solve_ivp(fun=ode_s4, t_span=[t[0], t[-1]], y0=f4, t_eval=t, events = [ty])
+            for i in sol4.y[0]:
+                x_displacements.append(i)
+            for i in sol4.y[1]:
+                y_displacements.append(i)
+            for i in sol4.y[2]:
+                a_displacements.append(i)
+            for i in sol4.y[3]:
+                x_velocities.append(i)
+            for i in sol4.y[4]:
+                y_velocities.append(i)
+            for i in sol4.y[5]:
+                a_velocities.append(i)            
+        
+    
+        idx = y_velocities.index(max(y_velocities))
+        o_v_x = x_velocities[idx]
+        o_v_y = y_velocities[idx]
+        o_v_a = a_velocities[idx]
+        return o_v_x, o_v_y, o_v_a
+    
+    o_v_x, o_v_y, o_v_a = solve_eq(i_v_x, i_v_y, i_v_a)
+    return o_v_x, o_v_y, o_v_a
+
+
+#%%
+K1s = np.linspace(10e8, 0.5*10e9, 20)
+C1s = np.linspace(1*10e6, 0.1*10e6, 20)
+mus = np.linspace(0.2, 0.8, 20)
+errors = np.zeros([len(K1s), len(C1s), len(mus)])
+
+
+x = -1
+for mu in mus:
+    x += 1
+    print(x)
+    y = -1
+    for C1 in C1s:
+        y += 1
+        print(y)
+        z = -1
+        for K1 in K1s:
+            z += 1
+            #MODEL PREDICTIONS
+            output_x_velocities = []
+            output_y_velocities = []
+            output_a_velocities = []
+            for i in range(0, len(HVI)):
+                #initial values from data
+                i_v_x = HVI[i]
+                i_v_y = VVI[i]
+                i_v_a = SI[i]
+                o_v_x, o_v_y, o_v_a = bounce(mu, K1, C1, i_v_x, i_v_y, i_v_a)
+                #append predictions
+                output_x_velocities.append(o_v_x)
+                output_y_velocities.append(o_v_y)
+                output_a_velocities.append(o_v_a)
+            MSD_x = mean_squared_error(HVO, output_x_velocities, squared = False)/abs(statistics.mean(HVO))
+            MSD_y = mean_squared_error(VVO, output_y_velocities, squared = False)/abs(statistics.mean(VVO))
+            MSD_a = mean_squared_error(SO, output_a_velocities, squared = False)/abs(statistics.mean(SO))
+            total_MSD = MSD_x + MSD_y + MSD_a
+            errors[z][y][x] = total_MSD
+            
+min_idx = np.unravel_index(errors.argmin(), errors.shape)
+
+print(mus[min_idx[2]])
+print(C1s[min_idx[1]])
+print(K1s[min_idx[0]])
